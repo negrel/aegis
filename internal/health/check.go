@@ -44,13 +44,11 @@ func Check(ctx context.Context, job HealthCheck) {
 
 	// Start health check until healthy.
 	{
-		time.Sleep(job.StartPeriod)
+		sleep(ctx, job.StartPeriod)
 
 		for i := uint(0); i < maxRetry; i++ {
-			select {
-			case <-ctx.Done():
+			if ctxDone(ctx) {
 				return
-			default:
 			}
 
 			hctx, cancel := context.WithTimeout(ctx, job.Timeout)
@@ -65,16 +63,14 @@ func Check(ctx context.Context, job HealthCheck) {
 
 			// Handle error.
 			errs = errors.Join(errs, err)
-			time.Sleep(job.StartInterval)
+			sleep(ctx, job.StartInterval)
 		}
 
 		if errs == nil {
 			setState(StateHealthy)
 		} else {
-			select {
-			case <-ctx.Done():
+			if ctxDone(ctx) {
 				return
-			default:
 			}
 			setState(StateUnhealthy)
 		}
@@ -82,13 +78,11 @@ func Check(ctx context.Context, job HealthCheck) {
 
 	// Monitor health now.
 	for {
-		time.Sleep(job.Interval)
+		sleep(ctx, job.Interval)
 
 		for i := uint(0); i < maxRetry; i++ {
-			select {
-			case <-ctx.Done():
+			if ctxDone(ctx) {
 				return
-			default:
 			}
 
 			hctx, cancel := context.WithTimeout(ctx, job.Timeout)
@@ -103,16 +97,14 @@ func Check(ctx context.Context, job HealthCheck) {
 
 			// Handle error.
 			errs = errors.Join(errs, err)
-			time.Sleep(job.Interval)
+			sleep(ctx, job.Interval)
 		}
 
 		if errs == nil {
 			setState(StateHealthy)
 		} else {
-			select {
-			case <-ctx.Done():
+			if ctxDone(ctx) {
 				return
-			default:
 			}
 			setState(StateUnhealthy)
 		}
@@ -127,3 +119,20 @@ const (
 	StateHealthy
 	StateUnhealthy
 )
+
+func ctxDone(ctx context.Context) bool {
+	select {
+	case <-ctx.Done():
+		return true
+	default:
+		return false
+	}
+}
+
+func sleep(ctx context.Context, dur time.Duration) {
+	ch := time.After(dur)
+	select {
+	case <-ch:
+	case <-ctx.Done():
+	}
+}

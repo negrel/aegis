@@ -26,6 +26,7 @@
               buildInputs = with pkgs; [
                 go
                 gopls
+                envoy
               ];
             };
           };

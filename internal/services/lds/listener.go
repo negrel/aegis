@@ -3,6 +3,9 @@ package lds
 import (
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	httprouter "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
+	httpman "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tcpproxy "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/negrel/aegis/internal/pbutils"
@@ -74,5 +77,98 @@ func (tpf TcpProxyFilter) ToFilter() *listener.Filter {
 				},
 			}),
 		},
+	}
+}
+
+// HttpProxyFilter is a listener filter to process HTTP streams.
+type HttpProxyFilter struct {
+	HttpFilters []HttpFilter
+	RouteConfig RouteConfig
+}
+
+func (hpf HttpProxyFilter) ToFilter() *listener.Filter {
+	filters := make([]*httpman.HttpFilter, len(hpf.HttpFilters))
+	for i, f := range hpf.HttpFilters {
+		filters[i] = f.ToHttpFilter()
+	}
+
+	return &listener.Filter{
+		Name: "envoy.filters.network.http_connection_manager",
+		ConfigType: &listener.Filter_TypedConfig{
+			TypedConfig: pbutils.MustMarshalAny(&httpman.HttpConnectionManager{
+				StatPrefix:  "http-conn-man",
+				HttpFilters: filters,
+				RouteSpecifier: &httpman.HttpConnectionManager_RouteConfig{
+					RouteConfig: hpf.RouteConfig.toRouteConfig(),
+				},
+			}),
+		},
+	}
+}
+
+// HttpFilter define a filter processing HTTP streams.
+type HttpFilter interface {
+	ToHttpFilter() *httpman.HttpFilter
+}
+
+// HttpRouter define an HTTP router filter.
+// See https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#envoy-v3-api-msg-extensions-filters-http-router-v3-router
+type HttpRouter struct{}
+
+func (hr HttpRouter) ToHttpFilter() *httpman.HttpFilter {
+	return &httpman.HttpFilter{
+		Name: "envoy.filters.http.router",
+		ConfigType: &httpman.HttpFilter_TypedConfig{
+			TypedConfig: pbutils.MustMarshalAny(&httprouter.Router{})},
+		IsOptional: false,
+		Disabled:   false,
+	}
+}
+
+// RouteConfig define HTTP route configurations.
+// See https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto#envoy-v3-api-msg-config-route-v3-routeconfiguration
+type RouteConfig struct {
+	Name         string
+	VirtualHosts []VirtualHost
+}
+
+func (rc RouteConfig) toRouteConfig() *route.RouteConfiguration {
+	vhosts := make([]*route.VirtualHost, len(rc.VirtualHosts))
+	for i, f := range rc.VirtualHosts {
+		vhosts[i] = f.toVirtualHost()
+	}
+
+	return &route.RouteConfiguration{
+		Name:         rc.Name,
+		VirtualHosts: vhosts,
+	}
+}
+
+// VirtualHost define virtual HTTP host.
+// See https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-msg-config-route-v3-virtualhost
+type VirtualHost struct {
+	Name    string
+	Domains []string
+	Cluster *cds.Cluster
+}
+
+func (vh VirtualHost) toVirtualHost() *route.VirtualHost {
+	return &route.VirtualHost{
+		Name:    vh.Name,
+		Domains: vh.Domains,
+		Routes: []*route.Route{
+			{
+				Name: "route",
+				Match: &route.RouteMatch{
+					PathSpecifier: &route.RouteMatch_Prefix{Prefix: "/"},
+				},
+				Action: &route.Route_Route{
+					Route: &route.RouteAction{
+						ClusterSpecifier: &route.RouteAction_Cluster{Cluster: vh.Cluster.Name},
+					},
+				},
+			},
+		},
+		RequireTls: route.VirtualHost_NONE,
 	}
 }
