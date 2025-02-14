@@ -11,8 +11,8 @@ import (
 	"time"
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
-	"github.com/negrel/aegis/internal/services/cds"
-	"github.com/negrel/aegis/internal/services/lds"
+	"github.com/negrel/aegis/internal/xds/cds"
+	"github.com/negrel/aegis/internal/xds/lds"
 	"github.com/negrel/aegis/internal/xnet"
 	"github.com/negrel/sgo"
 	"github.com/spf13/pflag"

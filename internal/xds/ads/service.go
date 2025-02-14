@@ -13,8 +13,8 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	server "github.com/envoyproxy/go-control-plane/pkg/server/v3"
-	"github.com/negrel/aegis/internal/services/cds"
-	"github.com/negrel/aegis/internal/services/lds"
+	"github.com/negrel/aegis/internal/xds/cds"
+	"github.com/negrel/aegis/internal/xds/lds"
 	"google.golang.org/grpc"
 )
 

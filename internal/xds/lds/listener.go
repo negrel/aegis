@@ -11,7 +11,7 @@ import (
 	tcpproxy "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/negrel/aegis/internal/pbutils"
-	"github.com/negrel/aegis/internal/services/cds"
+	"github.com/negrel/aegis/internal/xds/cds"
 	"github.com/negrel/aegis/internal/xnet"
 )
 

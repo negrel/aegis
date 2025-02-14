@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/negrel/aegis/internal/services/ads"
-	"github.com/negrel/aegis/internal/services/cds"
-	"github.com/negrel/aegis/internal/services/lds"
+	"github.com/negrel/aegis/internal/xds/ads"
+	"github.com/negrel/aegis/internal/xds/cds"
+	"github.com/negrel/aegis/internal/xds/lds"
 	"github.com/negrel/aegis/internal/xnet"
 	"github.com/negrel/sgo"
 )
