@@ -1,9 +1,11 @@
 package lds
 
 import (
+	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	accesslogfile "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/file/v3"
 	httprouter "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
 	httpman "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tcpproxy "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
@@ -96,7 +98,18 @@ func (hpf HttpProxyFilter) ToFilter() *listener.Filter {
 		Name: "envoy.filters.network.http_connection_manager",
 		ConfigType: &listener.Filter_TypedConfig{
 			TypedConfig: pbutils.MustMarshalAny(&httpman.HttpConnectionManager{
-				StatPrefix:  "http-conn-man",
+				StatPrefix: "http-conn-man",
+				AccessLog: []*accesslog.AccessLog{
+					{
+						Name: "envoy.access_loggers.stdout",
+						ConfigType: &accesslog.AccessLog_TypedConfig{
+							TypedConfig: pbutils.MustMarshalAny(&accesslogfile.FileAccessLog{
+								Path:            "/dev/stdout",
+								AccessLogFormat: &accesslogfile.FileAccessLog_Format{},
+							}),
+						},
+					},
+				},
 				HttpFilters: filters,
 				RouteSpecifier: &httpman.HttpConnectionManager_RouteConfig{
 					RouteConfig: hpf.RouteConfig.toRouteConfig(),
