@@ -7,11 +7,11 @@ import (
 	"github.com/negrel/aegis/internal/xds/cds"
 	"github.com/negrel/aegis/internal/xds/lds"
 	"github.com/negrel/aegis/internal/xnet"
-	"github.com/negrel/sgo"
+	"github.com/negrel/conc"
 )
 
 // Start ADS gRPC server.
-func StartAds(n sgo.Nursery) (*ads.Service, uint16, error) {
+func StartAds(n conc.Nursery) (*ads.Service, uint16, error) {
 	// Create xDS services.
 	ads := ads.ProvideService(
 		lds.ProvideService(),

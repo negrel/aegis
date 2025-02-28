@@ -13,6 +13,7 @@ import (
 	"github.com/negrel/aegis/internal/pbutils"
 	"github.com/negrel/aegis/internal/xds/cds"
 	"github.com/negrel/aegis/internal/xnet"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // Listener is a named network location (e.g., port, unix domain socket, etc.)
@@ -104,8 +105,44 @@ func (hpf HttpProxyFilter) ToFilter() *listener.Filter {
 						Name: "envoy.access_loggers.stdout",
 						ConfigType: &accesslog.AccessLog_TypedConfig{
 							TypedConfig: pbutils.MustMarshalAny(&accesslogfile.FileAccessLog{
-								Path:            "/dev/stdout",
-								AccessLogFormat: &accesslogfile.FileAccessLog_Format{},
+								Path: "/dev/stdout",
+								AccessLogFormat: &accesslogfile.FileAccessLog_TypedJsonFormat{
+									TypedJsonFormat: &structpb.Struct{
+										Fields: pbutils.MustMarshalValueMap(map[string]any{
+											"component":                 "envoy",
+											"log":                       "access",
+											"time":                      "%START_TIME%",
+											"protocol":                  "%PROTOCOL%",
+											"upstream_service_time":     "%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%",
+											"upstream_host":             "%UPSTREAM_HOST%",
+											"upstream_cluster":          "%UPSTREAM_CLUSTER%",
+											"upstream_local_address":    "%UPSTREAM_LOCAL_ADDRESS%",
+											"downstream_remote_address": "%DOWNSTREAM_REMOTE_ADDRESS%",
+											"downstream_remote_port":    "%DOWNSTREAM_REMOTE_PORT%",
+											"downstream_local_address":  "%DOWNSTREAM_LOCAL_ADDRESS%",
+											"downstream_local_port":     "%DOWNSTREAM_LOCAL_PORT%",
+											"request": map[string]any{
+												"method":          "%REQ(:METHOD)%",
+												"path":            "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%",
+												"authority":       "%REQ(:AUTHORITY)%",
+												"user_agent":      "%REQ(USER-AGENT)%",
+												"referer":         "%REQ(REFERER)%",
+												"request_id":      "%REQ(X-REQUEST-ID)%",
+												"x_forwarded_for": "%REQ(X-FORWARDED-FOR)%",
+											},
+											"response": map[string]any{
+												"status_code":    "%RESPONSE_CODE%",
+												"response_flags": "%RESPONSE_FLAGS%",
+												"bytes_received": "%BYTES_RECEIVED%",
+												"bytes_sent":     "%BYTES_SENT%",
+											},
+											"duration": map[string]any{
+												"request":  "%DURATION%",
+												"response": "%RESPONSE_DURATION%",
+											},
+										}),
+									},
+								},
 							}),
 						},
 					},

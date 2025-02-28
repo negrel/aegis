@@ -14,7 +14,7 @@ import (
 	"github.com/negrel/aegis/internal/xds/cds"
 	"github.com/negrel/aegis/internal/xds/lds"
 	"github.com/negrel/aegis/internal/xnet"
-	"github.com/negrel/sgo"
+	"github.com/negrel/conc"
 	"github.com/spf13/pflag"
 )
 
@@ -37,9 +37,9 @@ func main() {
 	}
 
 	// Setup logger.
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: logLevel,
-	}))
+	})).With(slog.String("component", "aegis"))
 
 	err := aegisMain(logger, Args{
 		domain:    *domain,
@@ -90,12 +90,7 @@ func aegisMain(logger *slog.Logger, args Args) error {
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	cancelf := func(format string, args ...any) error {
-		cancel()
-		return fmt.Errorf(format, args...)
-	}
-
-	return sgo.Block(func(n sgo.Nursery) error {
+	return conc.Block(func(n conc.Nursery) error {
 		// Cancel nursery on signal.
 		n.Go(func() error {
 			<-signals
@@ -107,13 +102,13 @@ func aegisMain(logger *slog.Logger, args Args) error {
 		// Start ADS gRPC server.
 		ads, adsPort, err := StartAds(n)
 		if err != nil {
-			return cancelf("failed to start ADS gRPC server: %w", err)
+			return fmt.Errorf("failed to start ADS gRPC server: %w", err)
 		}
 
 		// Start envoy.
 		err = StartEnvoy(n, logger, adsPort, 9901)
 		if err != nil {
-			return cancelf("failed to start envoy: %w", err)
+			return fmt.Errorf("failed to start envoy: %w", err)
 		}
 
 		// Start service.
@@ -123,7 +118,7 @@ func aegisMain(logger *slog.Logger, args Args) error {
 			service,
 		)
 		if err != nil {
-			return cancelf("failed to start service process: %w", err)
+			return fmt.Errorf("failed to start service process: %w", err)
 		}
 
 		// Create cluster.
@@ -170,9 +165,9 @@ func aegisMain(logger *slog.Logger, args Args) error {
 		defer cancel()
 		err = ads.Snapshot(ctx)
 		if err != nil {
-			return cancelf("failed to create xDS snapshot: %w", err)
+			return fmt.Errorf("failed to create xDS snapshot: %w", err)
 		}
 
 		return nil
-	}, sgo.WithContext(ctx))
+	}, conc.WithContext(ctx))
 }

@@ -2,6 +2,17 @@ node:
   cluster: expo-cluster
   id: expo-envoy
 
+application_log_config:
+  log_format:
+    json_format:
+      component: "envoy"
+      log: "app"
+      time: "%Y-%m-%dT%T.%F"
+      thread-id: "%t"
+      line: "%s:%#"
+      level: "%l"
+      msg: "%j"
+
 dynamic_resources:
   ads_config:
     api_type: GRPC

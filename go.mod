@@ -4,12 +4,10 @@ go 1.23.0
 
 toolchain go1.23.4
 
-replace github.com/negrel/sgo => ../sgo
-
 require (
 	github.com/elliotchance/orderedmap/v3 v3.1.0
 	github.com/envoyproxy/go-control-plane/envoy v1.32.4
-	github.com/negrel/sgo v0.0.0-20250208150222-1cd880edf434
+	github.com/negrel/conc v0.4.0
 	github.com/spf13/pflag v1.0.6
 	google.golang.org/grpc v1.70.0
 	google.golang.org/protobuf v1.36.4

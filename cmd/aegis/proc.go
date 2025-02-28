@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"slices"
@@ -32,20 +30,11 @@ type Process struct {
 // inherits environment variables plus the provided variables. This function
 // returns an error if it fails to start the process.
 func StartProcess(command string, args []string, env []string) (*Process, error) {
-	stdoutR, stdoutW, err := os.Pipe()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create stdout pipe: %w", err)
-	}
-	stderrR, stderrW, err := os.Pipe()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create stderr pipe: %w", err)
-	}
-
 	// Prepend command to args.
 	args = slices.Clone(args)
 	args = slices.Insert(args, 0, command)
 	// Resolve command absolute path.
-	command, err = exec.LookPath(command)
+	command, err := exec.LookPath(command)
 	if err != nil {
 		return nil, err
 	}
@@ -55,8 +44,8 @@ func StartProcess(command string, args []string, env []string) (*Process, error)
 		Env: env,
 		Files: []*os.File{
 			nil,
-			stdoutW,
-			stderrW,
+			os.Stdout,
+			os.Stderr,
 		},
 	})
 	if err != nil {
@@ -68,8 +57,6 @@ func StartProcess(command string, args []string, env []string) (*Process, error)
 		done:      make(chan struct{}),
 		doneState: atomic.Pointer[os.ProcessState]{},
 		doneErr:   atomic.Pointer[error]{},
-		stdout:    stdoutR,
-		stderr:    stderrR,
 	}
 
 	go func() {
@@ -79,12 +66,6 @@ func StartProcess(command string, args []string, env []string) (*Process, error)
 			proc.doneErr.Store(&err)
 		}
 		close(proc.done)
-
-		// Close pipes.
-		stdoutR.Close()
-		stdoutW.Close()
-		stderrR.Close()
-		stderrW.Close()
 	}()
 
 	return proc, nil
@@ -132,16 +113,6 @@ func (p *Process) Wait() (*os.ProcessState, error) {
 	}
 
 	return p.doneState.Load(), err
-}
-
-// Stdout returns a reader for process standard output.
-func (p *Process) Stdout() io.Reader {
-	return p.stdout
-}
-
-// Stderr returns a reader for process standard error.
-func (p *Process) Stderr() io.Reader {
-	return p.stderr
 }
 
 // Pid returns process id.

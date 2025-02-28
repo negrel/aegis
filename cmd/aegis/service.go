@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/negrel/aegis/internal/xnet"
-	"github.com/negrel/sgo"
+	"github.com/negrel/conc"
 )
 
 // StartService starts a service process.
-func StartService(n sgo.Nursery, logger *slog.Logger, service string) (uint16, error) {
+func StartService(n conc.Nursery, logger *slog.Logger, service string) (uint16, error) {
 	// Determinate service TCP port.
 	lis, tcpPort, err := xnet.RandomListener("tcp")
 	if err != nil {
@@ -51,16 +51,6 @@ func StartService(n sgo.Nursery, logger *slog.Logger, service string) (uint16, e
 	if err != nil {
 		return 0, fmt.Errorf("failed to start service process %v: %w", args, err)
 	}
-
-	// Forward logs.
-	n.Go(func() error {
-		printLines(proc.Stdout(), os.Stdout, "service | ")
-		return nil
-	})
-	n.Go(func() error {
-		printLines(proc.Stderr(), os.Stderr, "service | ")
-		return nil
-	})
 
 	// Stop process when nursery is canceled.
 	n.Go(func() error {

@@ -78,6 +78,7 @@ func Check(ctx context.Context, job HealthCheck) {
 
 	// Monitor health now.
 	for {
+		errs = nil
 		sleep(ctx, job.Interval)
 
 		for i := uint(0); i < maxRetry; i++ {

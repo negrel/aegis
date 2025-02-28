@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/negrel/aegis/internal/health"
-	"github.com/negrel/sgo"
+	"github.com/negrel/conc"
 )
 
 //go:embed envoy.tmpl.yml
@@ -27,7 +27,7 @@ type Envoy struct {
 // StartEnvoy starts an Envoy process with the provided configuration and returns
 // it. If process failed to start, an error is returned. Logs are forwarded to
 // the given logger.
-func StartEnvoy(n sgo.Nursery, logger *slog.Logger, xdsPort uint16, adminPort uint16) error {
+func StartEnvoy(n conc.Nursery, logger *slog.Logger, xdsPort uint16, adminPort uint16) error {
 	// Create config file.
 	cfgFile, err := os.CreateTemp(os.TempDir(), "aegis-envoy-config-*.yml")
 	if err != nil {
@@ -95,16 +95,6 @@ func StartEnvoy(n sgo.Nursery, logger *slog.Logger, xdsPort uint16, adminPort ui
 				}
 			},
 		})
-		return nil
-	})
-
-	// Forward logs.
-	n.Go(func() error {
-		printLines(proc.Stdout(), os.Stdout, "envoy | ")
-		return nil
-	})
-	n.Go(func() error {
-		printLines(proc.Stderr(), os.Stderr, "envoy | ")
 		return nil
 	})
 
