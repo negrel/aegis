@@ -3,15 +3,12 @@ package main
 import (
 	"context"
 	_ "embed"
-	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
 	"text/template"
 	"time"
 
-	"github.com/negrel/aegis/internal/health"
 	"github.com/negrel/conc"
 )
 
@@ -61,40 +58,6 @@ func StartEnvoy(n conc.Nursery, logger *slog.Logger, xdsPort uint16, adminPort u
 		if err != nil || state.ExitCode() > 0 {
 			panic("envoy exited with a non zero exit code")
 		}
-		return nil
-	})
-
-	// Monitor process health.
-	n.Go(func() error {
-		health.Check(n, health.HealthCheck{
-			Test: func(ctx context.Context) error {
-				req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://127.0.0.1:%v", adminPort), nil)
-				if err != nil {
-					panic(err)
-				}
-				resp, err := http.DefaultClient.Do(req)
-				if err != nil {
-					return err
-				}
-				if resp.StatusCode != 200 {
-					return errors.New(resp.Status)
-				}
-
-				return nil
-			},
-			Interval:      30 * time.Second,
-			Timeout:       3 * time.Second,
-			Retries:       3,
-			StartPeriod:   time.Second,
-			StartInterval: time.Second,
-			OnChange: func(oldState health.State, newState health.State, err error) {
-				if newState == health.StateUnhealthy {
-					logger.Error("envoy is not healthy")
-				} else if newState == health.StateHealthy {
-					logger.Info("envoy is healthy")
-				}
-			},
-		})
 		return nil
 	})
 
